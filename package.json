@@ -1,0 +1,26 @@
+{
+  "name": "faedra",
+  "version": "0.0.1",
+  "description": "Maths learning",
+  "main": "start.js",
+  "author": "Nikki Chadwick <nikky.chadwick@gmail.com>",
+  "license": "MIT",
+  "private": true,
+  "scripts": {
+    "build": "webpack --config webpack.config.js --mode production --env.patch",
+    "build-dev": "webpack --config webpack.config.js --mode development",
+    "start": "node --use_strict start.js",
+    "systest": "node --use_strict start.js --systest=true --port=3000 --certificate="
+  },
+  "dependencies": {
+    "body-parser": "^1.18.3",
+    "express": "^4.16.4",
+    "express-force-ssl": "^0.3.2",
+    "helmet": "^3.14.0",
+    "morgan": "^1.9.1",
+    "nconf": "^0.10.0"
+  },
+  "devDependencies": {
+    "eslint": "^5.7.0"
+  }
+}
