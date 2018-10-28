@@ -1,3 +1,5 @@
 {
-    "certificate": "/etc/letsencrypt/live/hekate.org.uk"
+    "certificate": "/etc/letsencrypt/live/hekate.org.uk",
+    "dataStoreConnectionLimit": "10",
+    "dataStoreSslCa": "azure.public.pem"
 }

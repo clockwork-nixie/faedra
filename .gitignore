@@ -1,6 +1,8 @@
 node_modules
-!desktop.ini
+npm-debug.log
+server.secret.json
+yarn-error.log
+.DS_Store
 .vs/
 .vscode/
-.DS_Store
-npm-debug.log
+!desktop.ini

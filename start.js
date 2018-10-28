@@ -1,5 +1,3 @@
-'use strict';
-
 /*
 * This is the NODEJS entrypoint: it spawns the requisite number of workers.
 */
@@ -12,19 +10,27 @@ const stopSignals = [
 
 let isStopping = false;
 
-// Handle the disconnect event: if we're not stopping the cluster, an exiting worker needs restarting using fork().
-cluster.on('disconnect', function (/*worker*/) {
-    if (!isStopping) {
-        cluster.fork();
-    }
-});
-
-
 if (cluster.isMaster) {
-    // This is the cluster master process so start the configured number of worker processes to run the application.
+    // The current thread is the cluster master process so start the configured number of worker processes to run the application.
     const workerCount = process.env.NODE_CLUSTER_WORKERS || 1;
 
     console.log(`Starting ${workerCount} worker${workerCount==1?'':'s'}...`);
+
+    cluster.on('exit', (worker, exitCode, signal) => {
+        if (worker && !isStopping) {
+            if (exitCode === 126) { // Non-restart exit code
+                isStopping = true;
+                console.log(`Fatal exit by child; stopping workers...`);
+
+                cluster.disconnect(function () {
+                    console.log('All workers stopped, exiting.');
+                    process.exit(0);
+                });   
+            } else {
+                cluster.fork();
+            }
+        }
+    });
 
     for (let i = 0; i < workerCount; i++) {
         cluster.fork();
@@ -41,6 +47,16 @@ if (cluster.isMaster) {
         });
     });
 } else {
-    // This is a worker process, so just run the application.
+    process.on('uncaughtException', error => {
+        if (error.syscall === 'bind') {
+            console.error(`\r\nERROR starting listener for worker ${process.pid}: ${error.code}\r\n`);
+            process.exit(126);
+        } else {
+            console.error(error);
+            setTimeout(() => process.exit(1), 1000);
+        }
+    });
+
+    // The current thread is a worker process, so just run the application.
     require('./server');
 }

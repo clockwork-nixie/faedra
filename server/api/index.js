@@ -1,103 +1,104 @@
 'use strict';
 
-const Authentication = require('./authentication');
+const controllers = require('./controllers');
 
 
-class Api {
-    constructor(datastore) {
-        this.authentication = new Authentication();
-        
-        this.datastore = datastore;
-        this.registerApi = this.registerApi.bind(this);
-        this.registerRoutes = this.registerRoutes.bind(this);
+class ApiActionCache {
+    constructor(application, context) {
+        this.actions = {};
+        this.application = application;
+        this.context = context;
     }
 
+    async addBinding(method) {
+        const binding = this.application[method.toLowerCase()].bind(this.application);
+        const context = this.context;
 
-    registerApi(get, post) {
-        const self = this;
-              
-        get('/api/test', (request, response) => response.json({ foo: 'bar' }), { allowAnonymous: true });
-            
-        post('/api/v1/login', async (request, response) => {
-            const username = request.body? request.body.username: null;
-            const password = request.body? request.body.password: null;
-
-            if (!username || !password) {
-                response.sendStatus(400);
-            } else {
-                const userId = await self.datastore.getUserId(username, password);
-
-                if (!userId) {
-                    response.sendStatus(401);
-                } else {
-                    const sessionKey = await self.datastore.createSession(userId);
-
-                    if (!sessionKey) {
-                        response.sendStatus(500);
-                    } else {
-                        response.json({ sessionKey });
-                    }
-                }
-            }
-        }, { allowAnonymous: true });
-
-        post('/api/v1/register', async (request, response) => {
-            const username = request.body? request.body.username: null;
-            const password = request.body? request.body.password: null;
-
-            if (!username || !password) {
-                response.sendStatus(400);
-            } else {
-                const userId = await self.datastore.createUser(username, password);
-
-                if (!userId) {
-                    response.sendStatus(409);
-                } else {
-                    const sessionKey = await self.datastore.createSession(userId);
-
-                    if (!sessionKey) {
-                        response.sendStatus(401);
-                    } else {
-                        response.json({ sessionKey: sessionKey });
-                    }
-                }
-            }
-        }, { allowAnonymous: true });
-    }
-
-
-    registerRoutes(application) {
-        const self = this;
-        const get = application.get.bind(application);
-        const post = application.post.bind(application);
-
-        const authenticate = (method, route, action, allowAnonymous) =>
-            method(route, async (request, response) => {
-                try {
-                    let user = null;
-
-                    if (!allowAnonymous) {
-                        const sessionKey = request.query.sessionKey; // TODO: should come from a header instead.
-                        const user = sessionKey? await self.datastore.getUser(sessionKey): null;
+        this.actions[method.toUpperCase()] = {
+            withAuthentication: (route, action) => {
+                binding(route, async (request, response) => {
+                    try {
+                        const sessionKey = request.query.sessionKey || (request.body && request.body.sessionKey); // TODO: should come from a header instead.
+                        const user = sessionKey? await self.context.dataStore.users.getBySessionKey(sessionKey): null;
 
                         if (!user) {
                             response.sendStatus(401);
                             return;
                         }
+                        return await action(request, response, user);
+                    } catch (error) {
+                        console.log(`API ${method.toUpperCase()}(${route}): ${error}`);
+                        response.sendStatus(500);
                     }
-                    return await action(request, response, user);
-                } catch (error) {
-                    console.log(`API(${route}): ${error}`);
-                    response.sendStatus(500);
-                }    
-            });
+                });
+            },
 
-        const getWithAuthentication = (route, action, { allowAnonymous = false } = {}) =>
-            authenticate(get, route, action, allowAnonymous);
-        const postWithAuthentication = (route, action, { allowAnonymous = false } = {}) =>
-            authenticate(post, route, action, allowAnonymous);
+            withoutAuthentication: (route, action) => {
+                binding(route, async (request, response) => {
+                    try {
+                        return await action(request, response, null);
+                    } catch (error) {
+                        console.log(`API ${method.toUpperCase()}(${route}): ${error}`);
+                        response.sendStatus(500);
+                    }
+                });
+            }
+        };
+    }
 
-        this.registerApi(getWithAuthentication, postWithAuthentication);
+
+    bindMethods(prefix, controller) {
+        const controllerName = controller.name.toLowerCase();
+        const descriptors = Object.getOwnPropertyDescriptors(controller.prototype);
+        const instance = new controller(this.context);
+    
+        for (const propertyName in descriptors) {
+            const routine = descriptors[propertyName].value;
+    
+            if (propertyName !=='constructor' && typeof (routine) === 'function') {
+                const words = propertyName.split(/(?=[A-Z])/);
+    
+                if (!words.length) {
+                    console.error(`API: Unable to map route for ${controllerName}.${propertyName}: invalid naming.`);
+                } else {
+                    const method = words[0].toUpperCase();
+                    const route = words.slice(1).map(word => word.toLowerCase()).join('-');
+                    const mapping = this.actions[method];
+
+                    if (!method) {
+                        console.error(`API: Invalid method for ${controllerName}.${propertyName}: ${method}.`);
+                    } else {
+                        const absoluteRoute = `${prefix}/${controllerName}${route? '/': ''}${route}`;
+                        const register = routine.isAnonymous?
+                            mapping.withoutAuthentication:
+                            mapping.withAuthentication;
+
+                        if (this.context.configuration.isSystest) {
+                            console.log(`API: registering ${method.toUpperCase()} ${absoluteRoute}`);
+                        }
+                        register(absoluteRoute, routine.bind(instance));
+                    }
+                }
+            }
+        }
+    }
+}
+
+
+class Api {
+    constructor(prefix, context) {
+        this.context = context;
+        this.prefix = prefix;
+        this.registerRoutes = this.registerRoutes.bind(this);
+    }
+
+    registerRoutes(application) {
+        const self = this;
+        const cache = new ApiActionCache(application, this.context);
+        const methods = [ "GET", "POST", "PUT", "DELETE" ];
+
+        methods.forEach(method => cache.addBinding(method));
+        controllers.forEach(controller => cache.bindMethods(self.prefix, controller));
     }
 }
 

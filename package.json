@@ -10,15 +10,19 @@
     "build": "webpack --config webpack.config.js --mode production --env.patch",
     "build-dev": "webpack --config webpack.config.js --mode development",
     "start": "node --use_strict start.js",
-    "systest": "node --use_strict start.js --systest=true --port=3000 --certificate="
+    "systest": "node --use_strict start.js --systest=true --port=3000 --certificate=",
+    "test": "echo \"Error: no test specified\" && exit 1"
   },
   "dependencies": {
+    "@fortawesome/fontawesome-free": "^5.4.1",
     "body-parser": "^1.18.3",
     "express": "^4.16.4",
     "express-force-ssl": "^0.3.2",
     "helmet": "^3.14.0",
     "morgan": "^1.9.1",
-    "nconf": "^0.10.0"
+    "mysql": "^2.16.0",
+    "nconf": "^0.10.0",
+    "uuid": "^3.3.2"
   },
   "devDependencies": {
     "eslint": "^5.7.0"

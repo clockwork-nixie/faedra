@@ -1,40 +1,33 @@
 'use strict';
 
+const fs = require('fs');
+
 const Api = require('./api');
+const Context = require('./context');
 const Webserver = require('./webserver');
 
-const fs = require('fs');
-const nconf = require('nconf').argv().file({ file: 'server.config.json' });
-
-const configuration = {
-    isSystest: nconf.get('systest') === "true",
-    webserver: {
-        certificate: nconf.get('certificate'),
-        port: nconf.get('port'),
-        sslPort: nconf.get('sslPort')
-    }
-};
-
-const api = new Api({});
-const application = new Webserver({ isDebug: configuration.isSystest });
+const configuration = require('./configuration');
 
 
-application.configure(api.registerRoutes);
-application.serve('public');
-application.alias('', 'public/index.html');
-application.use((request, response) => response.sendStatus(404));
+const context = new Context(configuration);
+const api = new Api('/api/v1', context);
+const webserver = new Webserver({ isDebug: configuration.isSystest });
 
+webserver.configure(api.registerRoutes);
+webserver.serve('public');
+webserver.alias('', 'public/index.html');
+webserver.use((request, response) => response.sendStatus(404));
 
 if (configuration.webserver.certificate) {
     if (fs.existsSync(configuration.webserver.certificate)) {
-        application.listen({
+        webserver.listen({
             certificate: configuration.webserver.certificate,
             port: configuration.webserver.sslPort
         });
     } else {
-        console.log("WARNING: HTTPS certificate missing - running as HTTP only.")
+        console.warn("WARNING: HTTPS certificate missing - running as HTTP only.")
     }
 }
-application.listen({ port: configuration.webserver.port });
+webserver.listen({ port: configuration.webserver.port });
 
-console.log(`SERVER: started worker ${process.pid}.`);
+console.log(`APPLICATION: started worker ${process.pid}.`);

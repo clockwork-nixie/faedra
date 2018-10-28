@@ -1,0 +1,17 @@
+DROP SCHEMA IF EXISTS faedra;
+CREATE SCHEMA faedra DEFAULT CHARACTER SET = utf8 DEFAULT COLLATE = utf8_general_ci;
+USE faedra;
+
+CREATE TABLE users (
+  id INT NOT NULL AUTO_INCREMENT,
+  username VARCHAR(20) NOT NULL,
+  password_hash VARCHAR(200) NOT NULL,
+  email VARCHAR(1000) NOT NULL,
+  sessionKey VARCHAR(50),
+  PRIMARY KEY (id),
+  UNIQUE INDEX username_UNIQUE (username),
+  UNIQUE INDEX email_UNIQUE (email),
+  UNIQUE INDEX sessionKey_UNIQUE (sessionKey))
+COMMENT = 'User definitions.';
+
+INSERT INTO users (username, password_hash, email) VALUES('foobar','92666c7d0220ff4bab27b8d386cb2919faeb323094ff91437227fcb8a0c8f6088cce09dd5587721cea380063b3cb0e0eb52b4faa17759fb8e7751022d8b6f22790d379d439fa800e','foo@bar');
