@@ -1,12 +1,16 @@
 'use strict';
 
+const fs = require('fs');
 const nconf = require('nconf');
 const path = require('path');
 
+const PRIVATE_CONFIG_FILE = 'server.secret.json';
+const PUBLIC_CONFIG_FILE = 'server.config.json';
+
 const configuration = nconf
     .argv()
-    .file('defaults', 'server.config.json')
-    .file('secrets', 'server.secret.json');
+    .file('defaults', PUBLIC_CONFIG_FILE)
+    .file('secrets', PRIVATE_CONFIG_FILE);
 
 module.exports = {
     isSystest: configuration.get('systest') === "true",

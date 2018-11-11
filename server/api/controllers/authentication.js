@@ -93,10 +93,8 @@ class Authentication {
 }
 
 
-Authentication.prototype.getHash.isAnonymous = true;
-Authentication.prototype.getLogin.isAnonymous = true;
-Authentication.prototype.postLogin.isAnonymous = true;
-Authentication.prototype.postRegister.isAnonymous = true;
+Authentication.isAnonymous = true;
+Authentication.prototype.postLogout.isAnonymous = false;
 
 
 module.exports = Authentication;

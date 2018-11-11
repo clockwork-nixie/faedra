@@ -68,13 +68,14 @@ class ApiActionCache {
                     if (!method) {
                         console.error(`API: Invalid method for ${controllerName}.${propertyName}: ${method}.`);
                     } else {
+                        const isAnonymous = (routine.isAnonymous || (controller.isAnonymous && routine.isAnonymous !== false));
                         const absoluteRoute = `${prefix}/${controllerName}${route? '/': ''}${route}`;
-                        const register = routine.isAnonymous?
+                        const register = isAnonymous?
                             mapping.withoutAuthentication:
                             mapping.withAuthentication;
 
                         if (this.context.configuration.isSystest) {
-                            console.log(`API: registering ${method.toUpperCase()} ${absoluteRoute}`);
+                            console.log(`API: registering ${method.toUpperCase()} ${absoluteRoute} [${isAnonymous? "anon": "auth"}]`);
                         }
                         register(absoluteRoute, routine.bind(instance));
                     }

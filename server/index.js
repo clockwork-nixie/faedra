@@ -1,11 +1,9 @@
 'use strict';
 
 const fs = require('fs');
-
 const Api = require('./api');
 const Context = require('./context');
 const Webserver = require('./webserver');
-
 const configuration = require('./configuration');
 
 
